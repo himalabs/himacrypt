@@ -1,0 +1,33 @@
+name: Run Lint
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v3
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root
+
+      - name: Install lint and typecheck dependencies
+        run: poetry run pip install ruff black mypy flake8
+
+      - name: Run Black formatter
+        run: make format
+
+      - name: Run lint
+        run: make lint
+
+      - name: Run typecheck
+        run: make typecheck

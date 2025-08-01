@@ -1,0 +1,33 @@
+[project]
+name = "himacrypt"
+version = "0.1.0"
+description = "A Python CLI tool and package to securely encrypt and manage environment variables for local development and deployments."
+authors = [
+    {name = "maharanasarkar",email = "maharanasarkars3@gmail.com"}
+]
+license = {text = "LICENSE"}
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pytest (>=8.4.1,<9.0.0)",
+    "black (>=25.1.0,<26.0.0)",
+    "mypy (>=1.17.0,<2.0.0)",
+    "flake8 (>=7.3.0,<8.0.0)",
+    "ruff (>=0.12.5,<0.13.0)",
+]
+
+
+[tool.black]
+line-length = 79
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 79
+extend-select = ["I"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
