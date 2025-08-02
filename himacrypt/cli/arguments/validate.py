@@ -2,7 +2,7 @@
 
 import argparse
 from pathlib import Path
-from typing import Optional, List, Set
+from typing import Optional, Set
 
 
 class ValidateArguments:

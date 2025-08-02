@@ -2,7 +2,13 @@
 
 import argparse
 import sys
-from .arguments import KeygenArguments, EncryptArguments, DecryptArguments, LintArguments
+
+from .arguments import (
+    DecryptArguments,
+    EncryptArguments,
+    KeygenArguments,
+    LintArguments,
+)
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -35,9 +41,7 @@ def create_parser() -> argparse.ArgumentParser:
     DecryptArguments.add_arguments(decrypt_parser)
 
     # Lint command
-    lint_parser = subparsers.add_parser(
-        "lint", help="Lint environment file"
-    )
+    lint_parser = subparsers.add_parser("lint", help="Lint environment file")
     LintArguments.add_arguments(lint_parser)
 
     return parser

@@ -9,5 +9,5 @@ __all__ = [
     "DecryptArguments",
     "EncryptArguments",
     "KeygenArguments",
-    "LintArguments"
+    "LintArguments",
 ]

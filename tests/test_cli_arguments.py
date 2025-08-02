@@ -1,9 +1,12 @@
 """Tests for CLI argument handling."""
 
 import argparse
+
 import pytest
-from pathlib import Path
-from himacrypt.cli.arguments import KeygenArguments, EncryptArguments, DecryptArguments, LintArguments
+
+from himacrypt.cli.arguments import (
+    KeygenArguments,
+)
 
 
 class TestKeygenArguments:
@@ -25,9 +28,7 @@ class TestKeygenArguments:
         KeygenArguments.add_arguments(parser)
 
         # Test with minimal required arguments
-        args = parser.parse_args([
-            "--out", str(tmp_path)
-        ])
+        args = parser.parse_args(["--out", str(tmp_path)])
         keygen_args = KeygenArguments()
         keygen_args.process_arguments(args)
         assert keygen_args.output_dir == tmp_path
@@ -35,14 +36,21 @@ class TestKeygenArguments:
 
         # Test with all arguments
         output_dir = tmp_path / "keys"
-        args = parser.parse_args([
-            "--out", str(output_dir),
-            "--key-size", "2048",
-            "--private-key-password", "secret",
-            "--public-key-name", "custom_public.pem",
-            "--private-key-name", "custom_private.pem",
-            "--force"
-        ])
+        args = parser.parse_args(
+            [
+                "--out",
+                str(output_dir),
+                "--key-size",
+                "2048",
+                "--private-key-password",
+                "secret",
+                "--public-key-name",
+                "custom_public.pem",
+                "--private-key-name",
+                "custom_private.pem",
+                "--force",
+            ]
+        )
         keygen_args = KeygenArguments()
         keygen_args.process_arguments(args)
 
@@ -71,7 +79,7 @@ class TestKeygenArguments:
         parser = argparse.ArgumentParser()
         KeygenArguments.add_arguments(parser)
         args = parser.parse_args(["--out", str(output_dir)])
-        
+
         keygen_args = KeygenArguments()
         with pytest.raises(ValueError) as exc_info:
             keygen_args.process_arguments(args)
@@ -82,10 +90,10 @@ class TestKeygenArguments:
         parser = argparse.ArgumentParser()
         KeygenArguments.add_arguments(parser)
         args = parser.parse_args(["--out", str(tmp_path)])
-        
+
         keygen_args = KeygenArguments()
         keygen_args.process_arguments(args)
-        
+
         assert keygen_args.public_key_path == tmp_path / "public.pem"
         assert keygen_args.private_key_path == tmp_path / "private.pem"
 
@@ -100,12 +108,9 @@ def test_cli_integration(tmp_path):
     KeygenArguments.add_arguments(keygen_parser)
 
     # Test keygen command
-    args = parser.parse_args([
-        "keygen",
-        "--out", str(tmp_path),
-        "--key-size", "2048",
-        "--force"
-    ])
+    args = parser.parse_args(
+        ["keygen", "--out", str(tmp_path), "--key-size", "2048", "--force"]
+    )
     assert args.command == "keygen"
     assert args.output_dir == tmp_path
     assert args.key_size == 2048
