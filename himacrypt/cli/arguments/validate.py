@@ -137,11 +137,16 @@ class ValidateArguments:
         if not self.input_file.exists():
             raise ValueError(f"Input file not found: {self.input_file}")
 
-    def get_validation_rules(self) -> dict:
+    def get_validation_rules(self) -> dict[str, object]:
         """Get the validation rules for environment variables.
 
         Returns:
-            dict: Dictionary containing validation rules.
+            dict[str, object]: Dictionary containing validation rules.
+                - sensitive_vars: Set[str] - Variables that should be treated as sensitive
+                - insecure_values: Set[str] - Values that might indicate security issues
+                - required_vars: Set[str] - Variables that must be present
+                - excluded_vars: Set[str] - Variables to exclude from validation
+                - checks: dict[str, bool] - Enabled validation checks
         """
         return {
             "sensitive_vars": self.SENSITIVE_VARS,

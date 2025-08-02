@@ -1,6 +1,7 @@
 """Tests for CLI argument handling."""
 
 import argparse
+from pathlib import Path
 
 import pytest
 
@@ -12,7 +13,7 @@ from himacrypt.cli.arguments import (
 class TestKeygenArguments:
     """Test cases for key generation arguments."""
 
-    def test_default_values(self):
+    def test_default_values(self) -> None:
         """Test default values are set correctly."""
         args = KeygenArguments()
         assert args.key_size == 4096
@@ -22,7 +23,7 @@ class TestKeygenArguments:
         assert args.private_key_password is None
         assert args.output_dir is None
 
-    def test_valid_arguments(self, tmp_path):
+    def test_valid_arguments(self, tmp_path: Path) -> None:
         """Test processing of valid arguments."""
         parser = argparse.ArgumentParser()
         KeygenArguments.add_arguments(parser)
@@ -61,7 +62,7 @@ class TestKeygenArguments:
         assert keygen_args.private_key_name == "custom_private.pem"
         assert keygen_args.force
 
-    def test_invalid_key_size(self):
+    def test_invalid_key_size(self) -> None:
         """Test that invalid key sizes are rejected."""
         parser = argparse.ArgumentParser()
         KeygenArguments.add_arguments(parser)
@@ -69,7 +70,7 @@ class TestKeygenArguments:
         with pytest.raises(SystemExit):
             parser.parse_args(["--out", "keys", "--key-size", "1024"])
 
-    def test_existing_files_without_force(self, tmp_path):
+    def test_existing_files_without_force(self, tmp_path: Path) -> None:
         """Test that existing files are detected without force flag."""
         # Create test files
         output_dir = tmp_path / "keys"
@@ -85,7 +86,7 @@ class TestKeygenArguments:
             keygen_args.process_arguments(args)
         assert "Use --force to overwrite" in str(exc_info.value)
 
-    def test_key_paths(self, tmp_path):
+    def test_key_paths(self, tmp_path: Path) -> None:
         """Test that key paths are constructed correctly."""
         parser = argparse.ArgumentParser()
         KeygenArguments.add_arguments(parser)
@@ -98,7 +99,7 @@ class TestKeygenArguments:
         assert keygen_args.private_key_path == tmp_path / "private.pem"
 
 
-def test_cli_integration(tmp_path):
+def test_cli_integration(tmp_path: Path) -> None:
     """Integration test for CLI argument handling."""
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")

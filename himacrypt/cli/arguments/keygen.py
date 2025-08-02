@@ -109,7 +109,12 @@ class KeygenArguments:
 
         Returns:
             Path: The absolute path where the public key will be saved.
+
+        Raises:
+            ValueError: If output_dir is not set.
         """
+        if self.output_dir is None:
+            raise ValueError("Output directory is not set")
         return self.output_dir / self.public_key_name
 
     @property
@@ -118,5 +123,10 @@ class KeygenArguments:
 
         Returns:
             Path: The absolute path where the private key will be saved.
+
+        Raises:
+            ValueError: If output_dir is not set.
         """
+        if self.output_dir is None:
+            raise ValueError("Output directory is not set")
         return self.output_dir / self.private_key_name
