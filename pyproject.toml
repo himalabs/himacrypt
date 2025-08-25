@@ -1,6 +1,6 @@
 [project]
 name = "himacrypt"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Python CLI tool and package to securely encrypt and manage environment variables for local development and deployments."
 authors = [
     {name = "maharanasarkar",email = "maharanasarkars3@gmail.com"}

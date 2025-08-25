@@ -1,6 +1,10 @@
 from pathlib import Path
 
-from himacrypt.core import Encryptor, generate_rsa_keypair, write_keypair_to_dir
+from himacrypt.core import (
+    Encryptor,
+    generate_rsa_keypair,
+    write_keypair_to_dir,
+)
 
 
 def test_encrypt_decrypt_roundtrip(tmp_path: Path) -> None:

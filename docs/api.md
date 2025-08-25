@@ -52,3 +52,5 @@ The library should raise clear exceptions for problems:
 ---
 
 For actual function signatures, consult the code in `himacrypt/core.py` or the module where encryption logic is implemented.
+
+See also: `docs/key_provider.md` for the `KeyProvider` interface and file-backed provider.

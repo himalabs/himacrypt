@@ -100,3 +100,9 @@ himacrypt decrypt --in /app/.env.enc --out /app/.env --private-key /run/secrets/
 ---
 
 This page focuses on practical commands. For a full reference of flags and options see the CLI Reference: `docs/cli.md`. For programmatic integration, see `docs/api.md`.
+
+## What's new (recent changes)
+
+- Added core encryption primitives and file helpers (`himacrypt/core.py`) implementing AES-GCM + RSA-OAEP hybrid encryption and RSA key generation helpers.
+- Added a `KeyProvider` abstraction and a simple `FileKeyProvider` implementation for local file-based key provisioning. See `docs/key_provider.md` for details.
+

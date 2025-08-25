@@ -38,6 +38,11 @@ Example:
 himacrypt keygen --out ./keys --key-size 4096
 ```
 
+Notes:
+
+- The CLI supports using a KeyProvider abstraction to locate or provision keys. By default the `keygen` command writes `private.pem` and `public.pem` into the specified directory.
+- To integrate with custom key stores (AWS KMS, GCP KMS), implement a KeyProvider and adapt the CLI wiring to call into that provider. See `docs/key_provider.md` for details.
+
 ### encrypt — Encrypt a file
 
 Usage:
