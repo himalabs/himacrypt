@@ -37,7 +37,7 @@ def test_json_field_encryption_roundtrip(tmp_path: Path) -> None:
 
 def test_yaml_field_encryption_roundtrip(tmp_path: Path) -> None:
     try:
-        import yaml  # type: ignore
+        import yaml
     except Exception:  # pragma: no cover - environment may lack PyYAML
         pytest.skip("PyYAML not available")
 

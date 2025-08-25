@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from himacrypt.core import rotate_keys
+from himacrypt.core import Encryptor, rotate_keys
 
 from .arguments import (
     DecryptArguments,
@@ -74,12 +74,80 @@ def main() -> int:
         elif args.command == "encrypt":
             encrypt_args = EncryptArguments()
             encrypt_args.process_arguments(args)
-            # TODO: Implement encryption logic
+            encryptor = Encryptor()
+
+            # Narrow optionals to concrete Paths for type-checkers
+            inp = encrypt_args.input_file
+            out = encrypt_args.output_file
+            pub = encrypt_args.public_key
+            if inp is None or out is None or pub is None:
+                print("Error: missing required paths", file=sys.stderr)
+                return 2
+
+            # create backup of output if requested
+            if out.exists() and encrypt_args.backup:
+                bak = out.with_suffix(out.suffix + ".bak")
+                out.replace(bak)
+
+            selected = (
+                encrypt_args.selected_keys
+                if encrypt_args.selected_keys
+                else None
+            )
+            if encrypt_args.format != "env":
+                encryptor.encrypt_structured_file(
+                    inp,
+                    out,
+                    pub,
+                    fmt=encrypt_args.format,
+                    selected_keys=selected,
+                )
+            else:
+                encryptor.encrypt_env_file(
+                    inp, out, pub, selected_keys=selected
+                )
             return 0
         elif args.command == "decrypt":
             decrypt_args = DecryptArguments()
             decrypt_args.process_arguments(args)
-            # TODO: Implement decryption logic
+            encryptor = Encryptor()
+
+            # Narrow optionals
+            inp = decrypt_args.input_file
+            out = decrypt_args.output_file
+            priv = decrypt_args.private_key
+            if inp is None or out is None or priv is None:
+                print("Error: missing required paths", file=sys.stderr)
+                return 2
+
+            # create backup if requested
+            if out.exists() and decrypt_args.backup:
+                bak = out.with_suffix(out.suffix + ".bak")
+                out.replace(bak)
+
+            if decrypt_args.format != "env":
+                encryptor.decrypt_structured_file(
+                    inp,
+                    out,
+                    priv,
+                    fmt=decrypt_args.format,
+                    key_password=(
+                        decrypt_args.key_password.encode()
+                        if decrypt_args.key_password is not None
+                        else None
+                    ),
+                )
+            else:
+                encryptor.decrypt_env_file(
+                    inp,
+                    out,
+                    priv,
+                    key_password=(
+                        decrypt_args.key_password.encode()
+                        if decrypt_args.key_password is not None
+                        else None
+                    ),
+                )
             return 0
         elif args.command == "lint":
             lint_args = LintArguments()

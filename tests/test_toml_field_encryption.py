@@ -1,7 +1,12 @@
-import toml
 from pathlib import Path
 
-from himacrypt.core import generate_rsa_keypair, write_keypair_to_dir, Encryptor
+import toml
+
+from himacrypt.core import (
+    Encryptor,
+    generate_rsa_keypair,
+    write_keypair_to_dir,
+)
 
 
 def test_toml_field_encryption_roundtrip(tmp_path: Path) -> None:
@@ -16,7 +21,15 @@ def test_toml_field_encryption_roundtrip(tmp_path: Path) -> None:
 
     enc = tmp_path / "data.toml.enc"
     encryptor = Encryptor()
-    encryptor.encrypt_structured_file(inp, enc, keys / "public.pem", fmt="toml", selected_keys={"tool.secret"})
-    encryptor.decrypt_structured_file(enc, out, keys / "private.pem", fmt="toml")
+    encryptor.encrypt_structured_file(
+        inp,
+        enc,
+        keys / "public.pem",
+        fmt="toml",
+        selected_keys={"tool.secret"},
+    )
+    encryptor.decrypt_structured_file(
+        enc, out, keys / "private.pem", fmt="toml"
+    )
     got = toml.loads(out.read_text(encoding="utf-8"))
     assert got["tool"]["secret"] == "s3"

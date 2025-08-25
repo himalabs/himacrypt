@@ -47,4 +47,3 @@ poetry run pytest -q
 ```
 
 If you want, I can start with package consolidation or implement the `Encryptor` and tests — tell me which one to begin.
-

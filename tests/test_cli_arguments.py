@@ -5,9 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from himacrypt.cli.arguments import (
-    KeygenArguments,
-)
+from himacrypt.cli.arguments import KeygenArguments
 
 
 class TestKeygenArguments:

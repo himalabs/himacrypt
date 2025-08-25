@@ -11,10 +11,13 @@ This is a focused, tested implementation intended for local development and unit
 
 from __future__ import annotations
 
+import base64
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Tuple, Union, cast
+from types import ModuleType
+from typing import Any, Optional, Tuple, Union, cast
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
@@ -27,6 +30,24 @@ from cryptography.hazmat.primitives.serialization import (
     BestAvailableEncryption,
     NoEncryption,
 )
+
+# optional third-party modules: typed as ModuleType | None for mypy
+yaml: Optional[ModuleType]
+toml: Optional[ModuleType]
+yaml = None
+toml = None
+try:
+    import yaml as _yaml
+
+    yaml = _yaml
+except Exception:  # pragma: no cover - optional dependency in tests
+    yaml = None
+try:
+    import toml as _toml
+
+    toml = _toml
+except Exception:  # pragma: no cover - optional dependency in tests
+    toml = None
 
 
 def generate_rsa_keypair(
@@ -146,20 +167,287 @@ class Encryptor:
         return Encryptor.decrypt_bytes(payload, private_key, password)
 
     def encrypt_env_file(
-        self, input_path: Path, output_path: Path, public_key_path: Path
+        self,
+        input_path: Path,
+        output_path: Path,
+        public_key_path: Path,
+        selected_keys: Optional[set[str]] = None,
     ) -> None:
-        """Encrypt a simple KEY=VALUE .env file and write a binary payload."""
+        """Encrypt a simple KEY=VALUE .env file.
+
+        If `selected_keys` is None, encrypt the whole file as a binary bundle
+        (legacy behavior). If `selected_keys` is provided, encrypt only the
+        specified keys and write a text `.env` file where encrypted values are
+        embedded as `ENC:<base64>` markers.
+        """
         public_key = self._load_public_key(public_key_path)
-        plaintext = input_path.read_bytes()
 
-        payload = self.encrypt_bytes(plaintext, public_key)
+        # If no selected_keys specified, use original full-file binary format
+        if not selected_keys:
+            plaintext = input_path.read_bytes()
+            payload = self.encrypt_bytes(plaintext, public_key)
+            with output_path.open("wb") as out:
+                out.write(len(payload.encrypted_key).to_bytes(4, "big"))
+                out.write(payload.encrypted_key)
+                out.write(len(payload.nonce).to_bytes(1, "big"))
+                out.write(payload.nonce)
+                out.write(payload.ciphertext)
+            return
 
-        with output_path.open("wb") as out:
-            out.write(len(payload.encrypted_key).to_bytes(4, "big"))
-            out.write(payload.encrypted_key)
-            out.write(len(payload.nonce).to_bytes(1, "big"))
-            out.write(payload.nonce)
-            out.write(payload.ciphertext)
+        # Field-level encryption: process as text
+        # support .env via existing code path
+        text = input_path.read_text(encoding="utf-8")
+        out_lines: list[str] = []
+        for line in text.splitlines(keepends=False):
+            if not line or line.strip().startswith("#") or "=" not in line:
+                out_lines.append(line)
+                continue
+            key, val = line.split("=", 1)
+            key_stripped = key.strip()
+            if key_stripped in selected_keys:
+                # encrypt the value only
+                payload = self.encrypt_bytes(val.encode("utf-8"), public_key)
+                # serialize payload to bytes same as binary format
+                buf = bytearray()
+                buf += len(payload.encrypted_key).to_bytes(4, "big")
+                buf += payload.encrypted_key
+                buf += len(payload.nonce).to_bytes(1, "big")
+                buf += payload.nonce
+                buf += payload.ciphertext
+                b64 = base64.b64encode(bytes(buf)).decode("ascii")
+                out_lines.append(f"{key}=ENC:{b64}")
+            else:
+                out_lines.append(line)
+
+        output_path.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
+
+    def _read_structured(self, input_path: Path, fmt: str) -> Any:
+        text = input_path.read_text(encoding="utf-8")
+        if fmt == "json":
+            return json.loads(text)
+        if fmt == "yaml":
+            if yaml is None:
+                raise RuntimeError("PyYAML not installed")
+            return yaml.safe_load(text)
+        if fmt == "toml":
+            if toml is None:
+                raise RuntimeError("toml library not installed")
+            return toml.loads(text)
+        raise ValueError(f"Unsupported format: {fmt}")
+
+    def _write_structured(
+        self, data: Any, output_path: Path, fmt: str
+    ) -> None:
+        if fmt == "json":
+            # deterministic JSON serialization
+            output_path.write_text(
+                json.dumps(data, sort_keys=True, separators=(",", ":")) + "\n",
+                encoding="utf-8",
+            )
+            return
+        if fmt == "yaml":
+            if yaml is None:
+                raise RuntimeError("PyYAML not installed")
+            # safe_dump has stable sort to minimize diffs
+            output_path.write_text(
+                yaml.safe_dump(data, sort_keys=True), encoding="utf-8"
+            )
+            return
+        if fmt == "toml":
+            if toml is None:
+                raise RuntimeError("toml library not installed")
+            output_path.write_text(toml.dumps(data), encoding="utf-8")
+            return
+        raise ValueError(f"Unsupported format: {fmt}")
+
+    def _traverse_and_apply(
+        self, obj: Any, selectors: set[str], public_key: Any, encrypt: bool
+    ) -> Any:
+        """Traverse structured data (dicts/lists) and encrypt/decrypt values
+        when the dotted selector path matches selectors. Selectors are simple
+        dotted paths like 'a.b.c' matching keys in nested dicts.
+        """
+        if isinstance(obj, dict):
+            new = {}
+            for k, v in obj.items():
+                # check full key and nested selectors
+                if not isinstance(v, (dict, list)):
+                    if encrypt:
+                        if k in selectors:
+                            payload = self.encrypt_bytes(
+                                str(v).encode("utf-8"), public_key
+                            )
+                            buf = bytearray()
+                            buf += len(payload.encrypted_key).to_bytes(
+                                4, "big"
+                            )
+                            buf += payload.encrypted_key
+                            buf += len(payload.nonce).to_bytes(1, "big")
+                            buf += payload.nonce
+                            buf += payload.ciphertext
+                            new[k] = (
+                                f"ENC:{base64.b64encode(bytes(buf)).decode('ascii')}"
+                            )
+                        else:
+                            new[k] = v
+                    else:
+                        # decrypt any ENC: value when selectors empty (decrypt all)
+                        if (
+                            isinstance(v, str)
+                            and v.startswith("ENC:")
+                            and (not selectors or k in selectors)
+                        ):
+                            b64 = v[len("ENC:") :]
+                            raw = base64.b64decode(b64)
+                            if len(raw) < 5:
+                                raise ValueError("Invalid embedded payload")
+                            klen = int.from_bytes(raw[:4], "big")
+                            idx = 4
+                            enc_key = raw[idx : idx + klen]
+                            idx += klen
+                            nlen = raw[idx]
+                            idx += 1
+                            nonce = raw[idx : idx + nlen]
+                            idx += nlen
+                            ciphertext = raw[idx:]
+                            payload = EncryptedPayload(
+                                encrypted_key=enc_key,
+                                nonce=nonce,
+                                ciphertext=ciphertext,
+                            )
+                            plain = self.decrypt_bytes(
+                                payload, public_key, password=None
+                            )
+                            new[k] = plain.decode("utf-8")
+                        else:
+                            new[k] = v
+                else:
+                    # descent into nested structures; also consider dotted selector match
+                    nested_selectors = {
+                        s.partition(".")[2]
+                        for s in selectors
+                        if s.startswith(k + ".")
+                    }
+                    if nested_selectors:
+                        new[k] = self._traverse_and_apply(
+                            v, nested_selectors, public_key, encrypt
+                        )
+                    else:
+                        new[k] = self._traverse_and_apply(
+                            v, selectors, public_key, encrypt
+                        )
+            return new
+        if isinstance(obj, list):
+            return [
+                self._traverse_and_apply(i, selectors, public_key, encrypt)
+                for i in obj
+            ]
+        # primitives
+        return obj
+
+    def encrypt_structured_file(
+        self,
+        input_path: Path,
+        output_path: Path,
+        public_key_path: Path,
+        fmt: str,
+        selected_keys: Optional[set[str]] = None,
+    ) -> None:
+        public_key = self._load_public_key(public_key_path)
+        data = self._read_structured(input_path, fmt)
+        if selected_keys:
+            data = self._traverse_and_apply(
+                data, selected_keys, public_key, encrypt=True
+            )
+        else:
+            # full-file: serialize to bytes and encrypt as binary bundle
+            if fmt == "json":
+                plaintext = json.dumps(
+                    data, sort_keys=True, separators=(",", ":")
+                ).encode("utf-8")
+            elif fmt == "yaml":
+                if yaml is None:
+                    raise RuntimeError("PyYAML not installed")
+                plaintext = yaml.safe_dump(data).encode("utf-8")
+            elif fmt == "toml":
+                if toml is None:
+                    raise RuntimeError("toml library not installed")
+                plaintext = toml.dumps(data).encode("utf-8")
+            else:
+                raise ValueError(f"Unsupported format: {fmt}")
+            payload = self.encrypt_bytes(plaintext, public_key)
+            with output_path.open("wb") as out:
+                out.write(len(payload.encrypted_key).to_bytes(4, "big"))
+                out.write(payload.encrypted_key)
+                out.write(len(payload.nonce).to_bytes(1, "big"))
+                out.write(payload.nonce)
+                out.write(payload.ciphertext)
+            return
+        self._write_structured(data, output_path, fmt)
+
+    def decrypt_structured_file(
+        self,
+        input_path: Path,
+        output_path: Path,
+        private_key_path: Path,
+        fmt: str,
+        key_password: Optional[bytes] = None,
+    ) -> None:
+        private_key = self._load_private_key(
+            private_key_path, password=key_password
+        )
+        # try to read as text structured or binary
+        try:
+            text = input_path.read_text(encoding="utf-8")
+        except Exception:
+            text = ""
+        # detect ENC markers
+        if "ENC:" in text:
+            data = self._read_structured(input_path, fmt)
+            data = self._traverse_and_apply(
+                data, set(), private_key, encrypt=False
+            )
+            self._write_structured(data, output_path, fmt)
+            return
+        # fallback: binary full-file
+        data = input_path.read_bytes()
+        if len(data) < 5:
+            raise ValueError("Invalid payload")
+        klen = int.from_bytes(data[:4], "big")
+        idx = 4
+        enc_key = data[idx : idx + klen]
+        idx += klen
+        nlen = data[idx]
+        idx += 1
+        nonce = data[idx : idx + nlen]
+        idx += nlen
+        ciphertext = data[idx:]
+
+        payload = EncryptedPayload(
+            encrypted_key=enc_key, nonce=nonce, ciphertext=ciphertext
+        )
+        plaintext = self.decrypt_bytes(
+            payload, private_key, password=key_password
+        )
+        # write back deterministic
+        if fmt == "json":
+            # assume plaintext was JSON
+            obj = json.loads(plaintext.decode("utf-8"))
+            self._write_structured(obj, output_path, fmt)
+            return
+        if fmt == "yaml":
+            if yaml is None:
+                raise RuntimeError("PyYAML not installed")
+            obj = yaml.safe_load(plaintext.decode("utf-8"))
+            self._write_structured(obj, output_path, fmt)
+            return
+        if fmt == "toml":
+            if toml is None:
+                raise RuntimeError("toml library not installed")
+            obj = toml.loads(plaintext.decode("utf-8"))
+            self._write_structured(obj, output_path, fmt)
+            return
+        raise ValueError(f"Unsupported format: {fmt}")
 
     def decrypt_env_file(
         self,
@@ -168,10 +456,55 @@ class Encryptor:
         private_key_path: Path,
         key_password: Optional[bytes] = None,
     ) -> None:
-        """Decrypt a binary payload produced by encrypt_env_file."""
+        """Decrypt either a full-file binary payload or an env file with
+        `ENC:<base64>` markers produced by field-level encryption.
+        """
         private_key = self._load_private_key(
             private_key_path, password=key_password
         )
+
+        # Try to read as text and detect ENC markers
+        text = input_path.read_text(encoding="utf-8", errors="ignore")
+        if "ENC:" in text:
+            out_lines: list[str] = []
+            for line in text.splitlines(keepends=False):
+                if not line or line.strip().startswith("#") or "=" not in line:
+                    out_lines.append(line)
+                    continue
+                key, val = line.split("=", 1)
+                if val.startswith("ENC:"):
+                    b64 = val[len("ENC:") :]
+                    raw = base64.b64decode(b64)
+                    # parse raw payload
+                    if len(raw) < 5:
+                        raise ValueError("Invalid embedded payload")
+                    klen = int.from_bytes(raw[:4], "big")
+                    idx = 4
+                    enc_key = raw[idx : idx + klen]
+                    idx += klen
+                    nlen = raw[idx]
+                    idx += 1
+                    nonce = raw[idx : idx + nlen]
+                    idx += nlen
+                    ciphertext = raw[idx:]
+                    payload = EncryptedPayload(
+                        encrypted_key=enc_key,
+                        nonce=nonce,
+                        ciphertext=ciphertext,
+                    )
+                    plaintext = self.decrypt_bytes(
+                        payload, private_key, password=key_password
+                    )
+                    out_lines.append(f"{key}={plaintext.decode('utf-8')}")
+                else:
+                    out_lines.append(line)
+
+            output_path.write_text(
+                "\n".join(out_lines) + "\n", encoding="utf-8"
+            )
+            return
+
+        # Fallback: full-file binary format
         data = input_path.read_bytes()
 
         if len(data) < 5:

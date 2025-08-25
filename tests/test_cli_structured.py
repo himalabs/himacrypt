@@ -99,32 +99,36 @@ def test_cli_toml_roundtrip(tmp_path: Path) -> None:
     write_keypair_to_dir(keys, priv, pub)
 
     enc = tmp_path / "t.toml.enc"
-    rc = run_cli([
-        "encrypt",
-        "--in",
-        str(inp),
-        "--out",
-        str(enc),
-        "--public-key",
-        str(keys / "public.pem"),
-        "--format",
-        "toml",
-        "--keys",
-        "pkg.token",
-    ])
+    rc = run_cli(
+        [
+            "encrypt",
+            "--in",
+            str(inp),
+            "--out",
+            str(enc),
+            "--public-key",
+            str(keys / "public.pem"),
+            "--format",
+            "toml",
+            "--keys",
+            "pkg.token",
+        ]
+    )
     assert rc == 0
 
-    rc = run_cli([
-        "decrypt",
-        "--in",
-        str(enc),
-        "--out",
-        str(out),
-        "--private-key",
-        str(keys / "private.pem"),
-        "--format",
-        "toml",
-    ])
+    rc = run_cli(
+        [
+            "decrypt",
+            "--in",
+            str(enc),
+            "--out",
+            str(out),
+            "--private-key",
+            str(keys / "private.pem"),
+            "--format",
+            "toml",
+        ]
+    )
     assert rc == 0
     got = toml.loads(out.read_text(encoding="utf-8"))
     assert got["pkg"]["token"] == "tok"

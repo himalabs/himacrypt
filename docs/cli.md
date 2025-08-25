@@ -68,6 +68,16 @@ Example:
 himacrypt encrypt --in .env --out .env.enc --public-key ./keys/public.pem
 ```
 
+Notes on `--format` and selectors:
+
+- The `--format` flag accepts `env`, `json`, `yaml`, or `toml`. When using structured formats (`json`, `yaml`, `toml`) you may pass dotted selectors to `--keys` to encrypt nested fields. Example:
+
+```bash
+himacrypt encrypt --in config.json --out config.json.enc --public-key ./keys/public.pem --format json --keys "database.password,api.token"
+```
+
+This will replace selected fields with `ENC:<base64>` markers in the resulting file while leaving other fields intact.
+
 ### decrypt — Decrypt a file
 
 Usage:

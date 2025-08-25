@@ -6,7 +6,7 @@
 [![Tests](https://github.com/himalabs/himacrypt/workflows/tests/badge.svg)](https://github.com/himalabs/himacrypt/actions?query=workflow%3Atests)
 
 
-**Secure your environment files with asymmetric encryption.**  
+**Secure your environment files with asymmetric encryption.**
 `himacrypt` is a Python CLI tool and library that lets you encrypt `.env`, `.json`, `.yaml`, and `.toml` files using RSA/hybrid encryption to safely store and manage secrets in your repositories or deployments.
 
 ---
@@ -155,5 +155,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for a list of changes and version history.
-
-
