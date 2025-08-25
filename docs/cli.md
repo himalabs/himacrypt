@@ -38,6 +38,11 @@ Example:
 himacrypt keygen --out ./keys --key-size 4096
 ```
 
+Notes:
+
+- The CLI supports using a KeyProvider abstraction to locate or provision keys. By default the `keygen` command writes `private.pem` and `public.pem` into the specified directory.
+- To integrate with custom key stores (AWS KMS, GCP KMS), implement a KeyProvider and adapt the CLI wiring to call into that provider. See `docs/key_provider.md` for details.
+
 ### encrypt — Encrypt a file
 
 Usage:
@@ -62,6 +67,16 @@ Example:
 ```bash
 himacrypt encrypt --in .env --out .env.enc --public-key ./keys/public.pem
 ```
+
+Notes on `--format` and selectors:
+
+- The `--format` flag accepts `env`, `json`, `yaml`, or `toml`. When using structured formats (`json`, `yaml`, `toml`) you may pass dotted selectors to `--keys` to encrypt nested fields. Example:
+
+```bash
+himacrypt encrypt --in config.json --out config.json.enc --public-key ./keys/public.pem --format json --keys "database.password,api.token"
+```
+
+This will replace selected fields with `ENC:<base64>` markers in the resulting file while leaving other fields intact.
 
 ### decrypt — Decrypt a file
 

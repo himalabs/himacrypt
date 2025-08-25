@@ -1,0 +1,49 @@
+(Next steps for the project - prioritized and actionable)
+
+1) Stabilize package layout and developer experience (HIGH)
+	- Consolidate CLI packages under `himacrypt/cli/` and remove duplicate `himacrypt_cli` / `himacrypt-cli` directories.
+	- Update `pyproject.toml` packages section to include `himacrypt` (package discovery or explicit include).
+	- Verify `poetry install`, `poetry run pytest`, `poetry run mypy`, and `poetry run ruff check` run from project root.
+	- Files to touch: `pyproject.toml`, move/merge argument modules into `himacrypt/cli/arguments/`, remove duplicates.
+
+2) Implement core crypto primitives and keygen (HIGH)
+	- Implement `himacrypt/core.py` with `Encryptor` class:
+	  - AES-GCM for content encryption and RSA-OAEP (SHA-256) to wrap the AES key.
+	  - Methods: `encrypt_env_file`, `decrypt_env_file`, and lower-level `encrypt_data`, `decrypt_data`.
+	- Implement key generation using `cryptography.hazmat.primitives.asymmetric.rsa` and PEM output.
+	- Add unit tests: `tests/test_crypto_roundtrip.py` (round-trip, field-level tests).
+
+3) CI / GitHub Actions (HIGH)
+	- Add `.github/workflows/ci.yml` to run ruff (lint), mypy (typecheck), pytest (tests), and black-check.
+	- Ensure workflow uses cache for poetry dependencies to speed up CI.
+
+4) Add KeyProvider abstraction + KMS integrations (MEDIUM)
+	- Introduce `himacrypt/key_provider.py` with `KeyProvider` interface and `FileKeyProvider` implementation.
+	- Add optional providers: `aws_kms`, `gcp_kms`, `vault` (pluggable backends).
+
+5) Secret rotation helper (MEDIUM)
+	- CLI command: `himacrypt rotate --old-key ... --new-key ... --files ...` with `--dry-run` option.
+	- Tests for rotation round-trip.
+
+6) Field-level encryption improvements (MEDIUM)
+	- Add JSONPath-like selectors or `--keys` CSV for structured formats.
+	- Ensure deterministic serialization when re-writing files.
+
+7) Auto-decrypt wrapper for Docker / scripts (MEDIUM)
+	- Provide `himacrypt run --decrypt .env.enc -- command ...` and Python context manager API.
+
+8) TUI for interactive workflows (LOW)
+	- Optional `textual` or `rich`-based interactive UI for key generation and encrypt/decrypt flows.
+
+9) Packaging and release automation (LOW)
+	- Add release GitHub Actions that build and publish wheel to PyPI on tag.
+
+Notes & immediate commands to run locally
+```
+poetry install
+poetry run ruff check .
+poetry run mypy .
+poetry run pytest -q
+```
+
+If you want, I can start with package consolidation or implement the `Encryptor` and tests — tell me which one to begin.

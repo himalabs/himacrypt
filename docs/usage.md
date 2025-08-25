@@ -33,6 +33,11 @@ Options:
 - `--keys` — comma-separated list of specific keys to encrypt (field-level encryption).
 - `--format` — file format (`env`, `json`, `yaml`, `toml`).
 
+Notes on structured formats and selectors:
+
+- When using `--format json|yaml|toml`, you can encrypt nested fields using dotted selectors (for example `service.token` or `a.b.c`). The CLI will embed encrypted values as `ENC:<base64>` markers for the selected keys.
+- Full-file encryption (no `--keys`) writes a binary bundle (`.enc`) containing the wrapped AES key and ciphertext and is platform-agnostic.
+
 ### 3) Decrypt a file
 
 ```bash
@@ -100,3 +105,8 @@ himacrypt decrypt --in /app/.env.enc --out /app/.env --private-key /run/secrets/
 ---
 
 This page focuses on practical commands. For a full reference of flags and options see the CLI Reference: `docs/cli.md`. For programmatic integration, see `docs/api.md`.
+
+## What's new (recent changes)
+
+- Added core encryption primitives and file helpers (`himacrypt/core.py`) implementing AES-GCM + RSA-OAEP hybrid encryption and RSA key generation helpers.
+- Added a `KeyProvider` abstraction and a simple `FileKeyProvider` implementation for local file-based key provisioning. See `docs/key_provider.md` for details.

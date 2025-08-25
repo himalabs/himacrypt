@@ -14,6 +14,7 @@ class DecryptArguments:
         self.output_file: Optional[Path] = None
         self.private_key: Optional[Path] = None
         self.key_password: Optional[str] = None
+        self.format: str = "env"
         self.backup: bool = False
 
     @staticmethod
@@ -58,6 +59,12 @@ class DecryptArguments:
             action="store_true",
             help="Create a backup of the output file if it exists",
         )
+        parser.add_argument(
+            "--format",
+            choices=["env", "json", "yaml", "toml"],
+            default="env",
+            help="Format of the input/output files",
+        )
 
     def process_arguments(self, args: argparse.Namespace) -> None:
         """Process and validate the parsed arguments.
@@ -72,6 +79,7 @@ class DecryptArguments:
         self.output_file = args.output_file
         self.private_key = args.private_key
         self.key_password = args.key_password
+        self.format = args.format
         self.backup = args.backup
 
         # Validate input file exists

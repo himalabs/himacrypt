@@ -6,7 +6,7 @@
 [![Tests](https://github.com/himalabs/himacrypt/workflows/tests/badge.svg)](https://github.com/himalabs/himacrypt/actions?query=workflow%3Atests)
 
 
-**Secure your environment files with asymmetric encryption.**  
+**Secure your environment files with asymmetric encryption.**
 `himacrypt` is a Python CLI tool and library that lets you encrypt `.env`, `.json`, `.yaml`, and `.toml` files using RSA/hybrid encryption to safely store and manage secrets in your repositories or deployments.
 
 ---
@@ -109,19 +109,18 @@ Decrypt AES key using RSA private key at runtime
 ## 🧱 Python API Usage
 
 ```python
-from himacrypt.core import encrypt_env_file, decrypt_env_file
+from himacrypt.core import Encryptor, generate_rsa_keypair, write_keypair_to_dir
 
-encrypt_env_file(
-    input_path=".env",
-    output_path=".env.enc",
-    public_key_path="keys/public.pem"
-)
+# Generate an RSA key pair (returns bytes)
+private_pem, public_pem = generate_rsa_keypair(key_size=2048)
+write_keypair_to_dir(Path('keys'), private_pem, public_pem)
 
-decrypt_env_file(
-    input_path=".env.enc",
-    output_path=".env",
-    private_key_path="keys/private.pem"
-)
+encryptor = Encryptor()
+# Encrypt a file
+encryptor.encrypt_env_file(input_path='.env', output_path='.env.enc', public_key_path=Path('keys/public.pem'))
+
+# Decrypt a file
+encryptor.decrypt_env_file(input_path='.env.enc', output_path='.env', private_key_path=Path('keys/private.pem'))
 ```
 
 ## 📁 Format Support
@@ -156,5 +155,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for a list of changes and version history.
-
-

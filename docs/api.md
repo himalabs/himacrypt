@@ -28,6 +28,8 @@ Possible methods (recommended minimal API):
 
 - `Encryptor.encrypt_env_file(input_path: str | Path, output_path: str | Path, public_key_path: str | Path, keys: Optional[list[str]] = None, format: str = "env") -> None`
 - `Encryptor.decrypt_env_file(input_path: str | Path, output_path: str | Path, private_key_path: str | Path, key_password: Optional[str] = None) -> str`
+ - `Encryptor.encrypt_structured_file(input_path: str | Path, output_path: str | Path, public_key_path: str | Path, fmt: str, selected_keys: Optional[set[str]] = None) -> None`
+ - `Encryptor.decrypt_structured_file(input_path: str | Path, output_path: str | Path, private_key_path: str | Path, fmt: str, key_password: Optional[str] = None) -> None`
 - `Encryptor.encrypt_data(data: bytes, public_key: rsa.PublicKey) -> bytes`
 - `Encryptor.decrypt_data(encrypted: bytes, private_key: rsa.PrivateKey, key_password: Optional[str]=None) -> bytes`
 
@@ -52,3 +54,5 @@ The library should raise clear exceptions for problems:
 ---
 
 For actual function signatures, consult the code in `himacrypt/core.py` or the module where encryption logic is implemented.
+
+See also: `docs/key_provider.md` for the `KeyProvider` interface and file-backed provider.
